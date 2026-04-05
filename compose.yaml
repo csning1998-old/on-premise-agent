@@ -1,0 +1,35 @@
+---
+services:
+  ollama:
+    image: docker.io/ollama/ollama:latest
+    container_name: ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    networks:
+      - rag-network
+    volumes:
+      - ./ollama_data:/root/.ollama:Z,U
+    devices:
+      - nvidia.com/gpu=all
+    restart: unless-stopped
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    depends_on:
+      - ollama
+    ports:
+      - "3000:8080"
+    networks:
+      - rag-network
+    volumes:
+      - ./open-webui_data:/app/backend/data:Z,U
+    environment:
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - ENABLE_OPENAI_API=${ENABLE_OPENAI_API}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
+    restart: unless-stopped
+
+networks:
+  rag-network:
+    driver: bridge
