@@ -1,4 +1,14 @@
 
 ollama_data
 open-webui_data
+searxng_data
+
+.agents
+artifacts
+
+terraform.tfvars
+.terraform
+*.tfstate*
+
 .env
+agent-force.md
