@@ -3,8 +3,9 @@
 variable "project_info" {
   description = "Project metadata for local and cloudflare resource labeling"
   type = object({
-    name      = string
-    base_path = string
+    name          = string
+    project_label = optional(string, "on-premise-rag-node")
+    docker_host   = string
   })
 }
 
