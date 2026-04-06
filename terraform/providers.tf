@@ -13,7 +13,7 @@ terraform {
 }
 
 provider "docker" {
-  host = "unix:///run/user/1000/podman/podman.sock"
+  host = var.project_info.docker_host
 }
 
 provider "cloudflare" {

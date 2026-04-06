@@ -2,8 +2,9 @@
 # Copy this to terraform.tfvars and fill in the actual values
 
 project_info = {
-  name      = "on-premise-agent"
-  base_path = "/absolute/path/to/project/root"
+  name          = "on-premise-agent"
+  project_label = "on-premise-rag-node"
+  docker_host   = "unix:///run/user/1000/podman/podman.sock"
 }
 
 # Container Images
@@ -27,5 +28,6 @@ open_web_ui = {
 }
 
 searxng = {
-  port = 8080
+  port     = 8080
+  base_url = "http://searxng:8080/"
 }

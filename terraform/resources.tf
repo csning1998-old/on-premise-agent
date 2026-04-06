@@ -38,7 +38,7 @@ resource "docker_container" "ollama" {
 
   volumes {
     container_path  = "/root/.ollama"
-    host_path       = "${var.project_info.base_path}/ollama_data"
+    host_path       = abspath("${path.root}/../ollama_data")
     selinux_relabel = "Z"
   }
 
@@ -53,7 +53,6 @@ resource "docker_container" "ollama" {
 
 # 2. Open WebUI Frontend
 resource "docker_container" "webui" {
-
   depends_on    = [docker_container.ollama]
   name          = "open-webui"
   image         = docker_image.open_webui.image_id
@@ -78,7 +77,7 @@ resource "docker_container" "webui" {
 
   volumes {
     container_path  = "/app/backend/data"
-    host_path       = "${var.project_info.base_path}/open-webui_data"
+    host_path       = abspath("${path.root}/../open-webui_data")
     selinux_relabel = "Z"
   }
 
@@ -100,7 +99,7 @@ resource "docker_container" "searxng" {
   restart       = "unless-stopped"
 
   env = [
-    "BASE_URL=http://searxng:8080/",
+    "BASE_URL=${var.searxng.base_url}",
     "SEARXNG_LIMITER=false"
   ]
 
@@ -115,7 +114,7 @@ resource "docker_container" "searxng" {
 
   volumes {
     container_path  = "/etc/searxng"
-    host_path       = "${var.project_info.base_path}/searxng_data"
+    host_path       = abspath("${path.root}/../searxng_data")
     read_only       = false
     selinux_relabel = "Z"
   }

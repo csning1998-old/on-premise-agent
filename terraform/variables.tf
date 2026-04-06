@@ -43,6 +43,7 @@ variable "open_web_ui" {
 variable "searxng" {
   description = "SearXNG search engine configurations"
   type = object({
-    port = number
+    port     = number
+    base_url = string
   })
 }
