@@ -1,9 +1,4 @@
 
-# Network for service communication
-resource "docker_network" "rag_network" {
-  name = "rag-network"
-}
-
 # Image management (Parameterized)
 resource "docker_image" "ollama" {
   name = var.container_images.ollama
@@ -17,80 +12,119 @@ resource "docker_image" "searxng" {
   name = var.container_images.searxng
 }
 
+# Network for service communication
+resource "docker_network" "rag_network" {
+  name        = "rag-network"
+  ipam_driver = "default"
+
+  lifecycle {
+    ignore_changes = [ipam_options]
+  }
+}
+
 # Container Services
 
-# Ollama Inference Node
+# 1. Ollama Inference Node
 resource "docker_container" "ollama" {
-  name  = "ollama"
-  image = docker_image.ollama.image_id
+  name          = "ollama"
+  image         = docker_image.ollama.image_id
+  security_opts = ["no-new-privileges:true"]
+  pid_mode      = "private"
+  restart       = "unless-stopped"
+
   networks_advanced {
     name = docker_network.rag_network.name
   }
+
   volumes {
     container_path  = "/root/.ollama"
     host_path       = "${var.project_info.base_path}/ollama_data"
     selinux_relabel = "Z"
   }
-  security_opts = ["no-new-privileges:true"]
+
   capabilities {
     drop = ["ALL"]
   }
-  restart = "unless-stopped"
+
+  lifecycle {
+    ignore_changes = [ulimit, security_opts, pid_mode, capabilities]
+  }
 }
 
-# Open WebUI Frontend
+# 2. Open WebUI Frontend
 resource "docker_container" "webui" {
-  name  = "open-webui"
-  image = docker_image.open_webui.image_id
-  networks_advanced {
-    name = docker_network.rag_network.name
-  }
-  ports {
-    internal = 8080
-    external = var.open_web_ui.port
-  }
+
+  depends_on    = [docker_container.ollama]
+  name          = "open-webui"
+  image         = docker_image.open_webui.image_id
+  security_opts = ["no-new-privileges:true"]
+  pid_mode      = "private"
+  restart       = "unless-stopped"
+
   env = [
     "OLLAMA_BASE_URL=${var.open_web_ui.ollama_base_url}",
     "WEBUI_SECRET_KEY=${var.open_web_ui.secret_key}",
     "ENABLE_OPENAI_API=${var.open_web_ui.enable_openai_api}"
   ]
+
+  networks_advanced {
+    name = docker_network.rag_network.name
+  }
+
+  ports {
+    internal = 8080
+    external = var.open_web_ui.port
+  }
+
   volumes {
     container_path  = "/app/backend/data"
     host_path       = "${var.project_info.base_path}/open-webui_data"
     selinux_relabel = "Z"
   }
-  security_opts = ["no-new-privileges:true"]
+
   capabilities {
     drop = ["ALL"]
   }
-  restart    = "unless-stopped"
-  depends_on = [docker_container.ollama]
+
+  lifecycle {
+    ignore_changes = [ulimit, security_opts, pid_mode, capabilities]
+  }
 }
 
-# SearXNG Search Engine
+# 3. SearXNG Search Engine
 resource "docker_container" "searxng" {
-  name  = "searxng"
-  image = docker_image.searxng.image_id
-  networks_advanced {
-    name = docker_network.rag_network.name
-  }
-  ports {
-    internal = 8080
-    external = var.searxng.port
-  }
+  name          = "searxng"
+  image         = docker_image.searxng.image_id
+  security_opts = ["no-new-privileges:true"]
+  pid_mode      = "private"
+  restart       = "unless-stopped"
+
   env = [
     "BASE_URL=http://searxng:8080/",
     "SEARXNG_LIMITER=false"
   ]
+
+  networks_advanced {
+    name = docker_network.rag_network.name
+  }
+
+  ports {
+    internal = 8080
+    external = var.searxng.port
+  }
+
   volumes {
     container_path  = "/etc/searxng"
     host_path       = "${var.project_info.base_path}/searxng_data"
     read_only       = false
     selinux_relabel = "Z"
   }
-  security_opts = ["no-new-privileges:true"]
+
   capabilities {
     drop = ["ALL"]
   }
-  restart = "unless-stopped"
+
+  lifecycle {
+    ignore_changes = [ulimit, security_opts, pid_mode, capabilities]
+  }
 }
