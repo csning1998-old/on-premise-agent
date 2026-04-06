@@ -1,33 +1,7 @@
 # Terraform Input Values Example
 # Copy this to terraform.tfvars and fill in the actual values
 
-project_info = {
-  name          = "on-premise-agent"
-  project_label = "on-premise-rag-node"
-  docker_host   = "unix:///run/user/1000/podman/podman.sock"
-}
-
-# Container Images
-container_images = {
-  ollama  = "ollama/ollama:latest"
-  webui   = "ghcr.io/open-webui/open-webui:main"
-  searxng = "searxng/searxng:latest"
-}
-
 # Sensitive Credentials
 cloudflare = {
   api_token = "your-cloudflare-api-token"
-}
-
-# Service Configurations
-open_web_ui = {
-  port              = 3000
-  enable_openai_api = false
-  ollama_base_url   = "http://ollama:11434"
-  secret_key        = "generate-with-openssl-rand-base64-32"
-}
-
-searxng = {
-  port     = 8080
-  base_url = "http://searxng:8080/"
 }
