@@ -43,23 +43,36 @@ Fedora's default SELinux policy restricts container access to hardware devices a
     ```
 
 - **Reset device node security:**
-  To prevent terminal access errors that may be caused by the Rootless network driver (pasta).
+
+    To prevent terminal access errors that may be caused by the Rootless network driver (pasta).
 
     ```zsh
     sudo restorecon -v /dev/ptmx
     ```
 
-### Step C. Security Keys and Environment Variables Preparation
+- **Enable Podman User Socket:**
 
-Before starting the service, an encryption key for Open WebUI must be generated.
+    Required for Terraform (OpenTofu) to manage containers via the local socket.
 
-- **Generate a random Base64 key:**
+    ```zsh
+    systemctl --user enable --now podman.socket
+    ```
+
+### Step C. Security Keys and Variable Configuration
+
+1. **Initialize the required `.tfvars` files:**
+
+    ```zsh
+    cp terraform/terraform.tfvars.example terraform/terraform.tfvars
+    ```
+
+2. **Generate a random Base64 key:**
 
     ```zsh
     openssl rand -base64 32
     ```
 
-    Fill the generated string into the `WEBUI_SECRET_KEY` variable in the `.env` file.
+    Fill the generated string into the `open_web_ui.secret_key` field in the `terraform.tfvars` file. Also update `project_info.base_path` with the absolute path of this repository.
 
 ### Step D. Volume Permissions and UID Mapping Handling
 
@@ -71,24 +84,29 @@ In Rootless mode, there is a mapping relationship between the host user and the 
     3. Grant appropriate read, write, and execute permissions
 
     ```zsh
-    mkdir -p ./ollama_data ./open-webui_data
-    podman unshare chown -R 0:0 ./ollama_data ./open-webui_data
-    chmod -R 775 ./ollama_data ./open-webui_data
+    mkdir -p ./ollama_data ./open-webui_data ./searxng_data
+    podman unshare chown -R 0:0 ./ollama_data ./open-webui_data ./searxng_data
+    chmod -R 775 ./ollama_data ./open-webui_data ./searxng_data
     ```
 
-### Step E. Service Startup and Verification
+### Step E. Infrastructure Deployment
 
-Use Podman Compose to start the integrated services and ensure SELinux labels are correct.
+Use OpenTofu/Terraform to start the integrated services and ensure SELinux labels are correct.
 
-- **Start services:**
+- **Initialize and Apply:**
 
     ```zsh
-    podman-compose up -d
+    cd terraform
+    terraform init
+    terraform plan
+    terraform apply -auto-approve
     ```
+
+    Simply change `terraform` to `tofu` if OpenTofu is preferred.
 
 - **Check Ollama model list and permissions:**
 
-    If this step does not report `permission denied`, the permission configuration was successful.
+    If this step does not report `permission denied`, the configuration was successful.
 
     ```zsh
     podman exec -it ollama ollama list
@@ -97,14 +115,14 @@ Use Podman Compose to start the integrated services and ensure SELinux labels ar
 - **View real-time logs:**
 
     ```zsh
-    podman-compose logs -f
+    podman logs -f open-webui
     ```
 
 ## Section 2. Troubleshooting
 
 ### A. Permission Denied (`mkdir /root/.ollama/models`)
 
-Usually caused by a missing `:Z,U` label in `compose.yaml`, or failing to run `podman unshare`. Please ensure the mount point is configured as `- ./ollama_data:/root/.ollama:Z,U`.
+In Podman + SELinux Enforcing mode, ensure the `volumes` block in `resources.tf` includes `selinux_relabel = "Z"`. Also verify `podman unshare` is executed as described in Step D.
 
 ### B. Unresolvable CDI Device
 
