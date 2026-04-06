@@ -6,15 +6,15 @@ resource "docker_network" "rag_network" {
 
 # Image management (Parameterized)
 resource "docker_image" "ollama" {
-  name = var.ollama_image
+  name = var.container_images.ollama
 }
 
 resource "docker_image" "open_webui" {
-  name = var.webui_image
+  name = var.container_images.webui
 }
 
 resource "docker_image" "searxng" {
-  name = var.searxng_image
+  name = var.container_images.searxng
 }
 
 # Container Services
@@ -28,7 +28,7 @@ resource "docker_container" "ollama" {
   }
   volumes {
     container_path  = "/root/.ollama"
-    host_path       = "${var.base_data_path}/ollama_data"
+    host_path       = "${var.project_info.base_path}/ollama_data"
     selinux_relabel = "Z"
   }
   security_opts = ["no-new-privileges:true"]
@@ -47,16 +47,16 @@ resource "docker_container" "webui" {
   }
   ports {
     internal = 8080
-    external = var.webui_port
+    external = var.open_web_ui.port
   }
   env = [
-    "OLLAMA_BASE_URL=${var.webui_ollama_base_url}",
-    "WEBUI_SECRET_KEY=${var.webui_secret_key}",
-    "ENABLE_OPENAI_API=${var.webui_enable_openai_api}"
+    "OLLAMA_BASE_URL=${var.open_web_ui.ollama_base_url}",
+    "WEBUI_SECRET_KEY=${var.open_web_ui.secret_key}",
+    "ENABLE_OPENAI_API=${var.open_web_ui.enable_openai_api}"
   ]
   volumes {
     container_path  = "/app/backend/data"
-    host_path       = "${var.base_data_path}/open-webui_data"
+    host_path       = "${var.project_info.base_path}/open-webui_data"
     selinux_relabel = "Z"
   }
   security_opts = ["no-new-privileges:true"]
@@ -76,7 +76,7 @@ resource "docker_container" "searxng" {
   }
   ports {
     internal = 8080
-    external = var.searxng_port
+    external = var.searxng.port
   }
   env = [
     "BASE_URL=http://searxng:8080/",
@@ -84,7 +84,7 @@ resource "docker_container" "searxng" {
   ]
   volumes {
     container_path  = "/etc/searxng"
-    host_path       = "${var.base_data_path}/searxng_data"
+    host_path       = "${var.project_info.base_path}/searxng_data"
     read_only       = false
     selinux_relabel = "Z"
   }

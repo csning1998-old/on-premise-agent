@@ -1,62 +1,47 @@
 
 # Project Identification
-variable "project_name" {
-  description = "Project name for local and cloudflare resource labeling"
-  type        = string
-}
-
-# Path Configuration
-variable "base_data_path" {
-  description = "Base absolute path for persistent data volumes"
-  type        = string
+variable "project_info" {
+  description = "Project metadata for local and cloudflare resource labeling"
+  type = object({
+    name      = string
+    base_path = string
+  })
 }
 
 # Container Images
-variable "ollama_image" {
-  description = "Image for Ollama inference service"
-  type        = string
-}
-
-variable "webui_image" {
-  description = "Image for Open WebUI frontend"
-  type        = string
-}
-
-variable "searxng_image" {
-  description = "Image for SearXNG engine"
-  type        = string
+variable "container_images" {
+  description = "Container images for the application services"
+  type = object({
+    ollama  = string
+    webui   = string
+    searxng = string
+  })
 }
 
 # Sensitive Credentials
-variable "cloudflare_api_token" {
-  description = "Cloudflare API Token for DNS and Tunnel management"
-  type        = string
-  sensitive   = true
+variable "cloudflare" {
+  description = "Cloudflare security credentials"
+  type = object({
+    api_token = string
+  })
+  sensitive = true
 }
 
-variable "webui_secret_key" {
-  description = "Secret key for Open WebUI sessions"
-  type        = string
-  sensitive   = true
+# Service Configurations
+variable "open_web_ui" {
+  description = "Open WebUI frontend configurations"
+  type = object({
+    port              = number
+    enable_openai_api = bool
+    ollama_base_url   = string
+    secret_key        = string
+  })
+  sensitive = true
 }
 
-# WebUI Configurations
-variable "webui_enable_openai_api" {
-  description = "Toggle for OpenAI API support in WebUI"
-  type        = bool
-}
-
-variable "webui_ollama_base_url" {
-  description = "Base URL for Ollama service within the network"
-  type        = string
-}
-
-variable "webui_port" {
-  description = "External port for Open WebUI"
-  type        = number
-}
-
-variable "searxng_port" {
-  description = "External port for SearXNG"
-  type        = number
+variable "searxng" {
+  description = "SearXNG search engine configurations"
+  type = object({
+    port = number
+  })
 }
