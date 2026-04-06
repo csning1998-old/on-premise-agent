@@ -63,7 +63,10 @@ resource "docker_container" "webui" {
   env = [
     "OLLAMA_BASE_URL=${var.open_web_ui.ollama_base_url}",
     "WEBUI_SECRET_KEY=${var.open_web_ui.secret_key}",
-    "ENABLE_OPENAI_API=${var.open_web_ui.enable_openai_api}"
+    "ENABLE_OPENAI_API=${var.open_web_ui.enable_openai_api}",
+    "ENABLE_RAG_WEB_SEARCH=${var.open_web_ui.enable_rag_web_search}",
+    "RAG_WEB_SEARCH_ENGINE=searxng",
+    "SEARXNG_QUERY_URL=${var.open_web_ui.searxng_query_url}"
   ]
 
   networks_advanced {

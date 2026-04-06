@@ -32,10 +32,12 @@ variable "cloudflare" {
 variable "open_web_ui" {
   description = "Open WebUI frontend configurations"
   type = object({
-    port              = number
-    enable_openai_api = bool
-    ollama_base_url   = string
-    secret_key        = string
+    port                  = number
+    enable_openai_api     = bool
+    ollama_base_url       = string
+    secret_key            = string
+    enable_rag_web_search = bool
+    searxng_query_url     = string
   })
   sensitive = true
 }
