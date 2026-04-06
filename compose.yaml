@@ -18,6 +18,7 @@ services:
     container_name: open-webui
     depends_on:
       - ollama
+      - searxng
     ports:
       - "3000:8080"
     networks:
@@ -28,6 +29,25 @@ services:
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
       - ENABLE_OPENAI_API=${ENABLE_OPENAI_API}
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
+      - ENABLE_RAG_WEB_SEARCH=True
+      - RAG_WEB_SEARCH_ENGINE=searxng
+      - SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&engines=google
+      - WEB_SEARCH_CONCURRENT_REQUESTS=${WEB_SEARCH_CONCURRENT_REQUESTS}
+      - WEB_SEARCH_RESULT_COUNT=${WEB_SEARCH_RESULT_COUNT}
+    restart: unless-stopped
+
+  searxng:
+    image: docker.io/searxng/searxng:latest
+    container_name: searxng
+    networks:
+      - rag-network
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./searxng_data:/etc/searxng:Z,U
+    environment:
+      - SEARXNG_LIMITER=false
+      - BASE_URL=http://searxng:8080/
     restart: unless-stopped
 
 networks:
