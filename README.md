@@ -72,7 +72,14 @@ Fedora's default SELinux policy restricts container access to hardware devices a
     openssl rand -base64 32
     ```
 
-    Fill the generated string into the `open_web_ui.secret_key` field in the `terraform.tfvars` file. Also update `project_info.base_path` with the absolute path of this repository.
+    Fill the generated string into the `open_web_ui.secret_key` field in the `terraform.tfvars` file.
+
+    > [!TIP]
+    > **Container Runtime Socket**:
+    >
+    > - **Podman (Rootless)**: `unix:///run/user/<UID>/podman/podman.sock` (Retrieve UID via `id -u`).
+    > - **Docker (Standard)**: `unix:///var/run/docker.sock`.
+    >   Update `project_info.docker_host` in `terraform.tfvars` accordingly.
 
 ### Step D. Volume Permissions and UID Mapping Handling
 
