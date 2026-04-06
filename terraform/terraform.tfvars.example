@@ -1,0 +1,21 @@
+
+# Project Identification
+project_name   = "on-premise-agent"
+base_data_path = "/home/csning1998/GitHub/on-premise-agent"
+
+# Container Images
+ollama_image  = "ollama/ollama:latest"
+webui_image   = "ghcr.io/open-webui/open-webui:main"
+searxng_image = "searxng/searxng:latest"
+
+# Sensitive Credentials
+cloudflare_api_token = "your_cloudflare_api_token"
+webui_secret_key     = "your_webui_secret_key"
+
+# WebUI Configurations
+webui_port              = 3000
+webui_enable_openai_api = false
+webui_ollama_base_url   = "http://ollama:11434"
+
+# Engine Configurations
+searxng_port = 8080
