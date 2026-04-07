@@ -10,18 +10,37 @@ import os
 from typing import Generator, Iterator, List, Union
 
 import requests
+from pydantic import BaseModel, Field
 
 
 class Pipeline:
     """Open WebUI Pipeline for multistage LLM reasoning."""
 
+    class Valves(BaseModel):
+        """Configuration options for the pipeline."""
+
+        ollama_url: str = Field(
+            default=os.getenv("OLLAMA_BASE_URL", "http://ollama:11434"),
+            description="Base URL for the Ollama API.",
+        )
+        searxng_url: str = Field(
+            default=os.getenv("SEARXNG_BASE_URL", "http://searxng:8080"),
+            description="Base URL for the SearXNG API.",
+        )
+        e4b_model: str = Field(
+            default="gemma4:e4b",
+            description="Model identifier for intent and keywords generation.",
+        )
+        a4b_model: str = Field(
+            default="gemma4:26b",
+            description="Model identifier for deep reasoning (thinking mode).",
+        )
+
     def __init__(self):
-        """Initializes the pipeline with service URLs and model identifiers."""
+        """Initializes the pipeline with default id, name and valves."""
+        self.id = "gemma_4_multistage"
         self.name = "Gemma 4 Multistage Deep Think"
-        self.ollama_url = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
-        self.searxng_url = os.getenv("SEARXNG_BASE_URL", "http://searxng:8080")
-        self.e4b_model = "gemma4:e4b"
-        self.a4b_model = "gemma4:26b"
+        self.valves = self.Valves()
 
     async def on_startup(self):
         """Lifecycle event triggered when the pipeline starts."""
@@ -46,9 +65,9 @@ class Pipeline:
         )
         try:
             response = requests.post(
-                f"{self.ollama_url}/api/generate",
+                f"{self.valves.ollama_url}/api/generate",
                 json={
-                    "model": self.e4b_model,
+                    "model": self.valves.e4b_model,
                     "prompt": prompt,
                     "stream": False,
                     "keep_alive": 0,
@@ -74,7 +93,7 @@ class Pipeline:
             return ""
 
         try:
-            search_url = f"{self.searxng_url}/search?q={keywords}&format=json"
+            search_url = f"{self.valves.searxng_url}/search?q={keywords}&format=json"
             response = requests.get(search_url, timeout=15)
             response.raise_for_status()
             results = response.json().get("results", [])[:5]
@@ -118,9 +137,9 @@ class Pipeline:
             """Streams the response from the 26B model."""
             try:
                 with requests.post(
-                    f"{self.ollama_url}/api/generate",
+                    f"{self.valves.ollama_url}/api/generate",
                     json={
-                        "model": self.a4b_model,
+                        "model": self.valves.a4b_model,
                         "prompt": final_prompt,
                         "stream": True,
                         "options": {"num_ctx": 16384},
@@ -131,9 +150,12 @@ class Pipeline:
                     r.raise_for_status()
                     for line in r.iter_lines():
                         if line:
-                            chunk = json.loads(line)
-                            if not chunk.get("done", False):
-                                yield chunk.get("response", "")
+                            try:
+                                chunk = json.loads(line)
+                                if not chunk.get("done", False):
+                                    yield chunk.get("response", "")
+                            except (json.JSONDecodeError, ValueError):
+                                continue
             except requests.exceptions.RequestException as e:
                 yield f"Error in Deep Inference Stage: {e}"
 
