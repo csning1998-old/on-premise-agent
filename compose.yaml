@@ -47,7 +47,8 @@ services:
       - ENABLE_WEB_SEARCH_BY_DEFAULT=${ENABLE_WEB_SEARCH_BY_DEFAULT}
       - WEB_SEARCH_ENGINE=${WEB_SEARCH_ENGINE}
       - WEB_SEARCH_QUERY_URL=${WEB_SEARCH_QUERY_URL}
-      - WEBUI_SYSTEM_PROMPT=${WEBUI_SYSTEM_PROMPT}
+      - OPENAI_API_BASE_URLS=http://pipelines:9099;
+      - OPENAI_API_KEYS=pipelines;
     restart: unless-stopped
 
   searxng:
@@ -62,6 +63,21 @@ services:
     environment:
       - SEARXNG_LIMITER=false
       - BASE_URL=http://searxng:8080/
+    restart: unless-stopped
+
+  pipelines:
+    image: ghcr.io/open-webui/pipelines:main
+    container_name: pipelines
+    ports:
+      - "9099:9099"
+    networks:
+      - rag-network
+    volumes:
+      - ./pipelines/workflows:/app/pipelines:Z,U
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - SEARXNG_BASE_URL=http://searxng:8080
+      - PIPELINES_API_KEY=${PIPELINES_API_KEY}
     restart: unless-stopped
 
 networks:
