@@ -47,7 +47,7 @@ services:
       - ENABLE_WEB_SEARCH_BY_DEFAULT=${ENABLE_WEB_SEARCH_BY_DEFAULT}
       - WEB_SEARCH_ENGINE=${WEB_SEARCH_ENGINE}
       - WEB_SEARCH_QUERY_URL=${WEB_SEARCH_QUERY_URL}
-      - OPENAI_API_BASE_URLS=http://pipelines:9099;
+      - OPENAI_API_BASE_URLS=${PIPELINES_URL};
       - OPENAI_API_KEYS=pipelines;
     restart: unless-stopped
 
@@ -62,7 +62,7 @@ services:
       - ./searxng_data:/etc/searxng:Z,U
     environment:
       - SEARXNG_LIMITER=false
-      - BASE_URL=http://searxng:8080/
+      - BASE_URL=${SEARXNG_BASE_URL}
     restart: unless-stopped
 
   pipelines:
@@ -75,8 +75,8 @@ services:
     volumes:
       - ./pipelines/workflows:/app/pipelines:Z,U
     environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - SEARXNG_BASE_URL=http://searxng:8080
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
+      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL}
       - PIPELINES_API_KEY=${PIPELINES_API_KEY}
     restart: unless-stopped
 
