@@ -1,5 +1,13 @@
 # Open WebUI + Ollama RAG
 
+## Section 0. Introduction
+
+This project implements a **Multistage Deep-Thinking Agent** that integrates **Ollama**, **Open WebUI**, and **SearXNG** to provide advanced reasoning capabilities. It addresses the limitations of the native RAG system by utilizing a containerized **Pipelines** service for complex, multistage tasks.
+
+Native RAG mode cannot switch models between the intent analysis and deep reasoning stages. In an 8GB VRAM environment, this leads to Out-of-Memory (OOM) errors or severe performance degradation when attempting to load E4B and 26B simultaneously.
+
+Currently, the system is deployed on a **Fedora 43** host with an **NVIDIA RTX 4070 (8GB VRAM, laptop mobile)** GPU.
+
 ## Section 1. Configure Environment
 
 ### Step A. NVIDIA GPU Container Device Interface

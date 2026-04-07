@@ -18,6 +18,7 @@ services:
     container_name: open-webui
     depends_on:
       - ollama
+      - searxng
     ports:
       - "3000:8080"
     networks:
@@ -28,6 +29,55 @@ services:
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
       - ENABLE_OPENAI_API=${ENABLE_OPENAI_API}
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
+      - ENABLE_RAG_WEB_SEARCH=${ENABLE_RAG_WEB_SEARCH}
+      - RAG_WEB_SEARCH_ENGINE=${RAG_WEB_SEARCH_ENGINE}
+      - SEARXNG_QUERY_URL=${SEARXNG_QUERY_URL}
+      - RAG_TOP_K=${RAG_TOP_K}
+      - RAG_RELEVANCE_THRESHOLD=${RAG_RELEVANCE_THRESHOLD}
+      - WEB_SEARCH_CONCURRENT_REQUESTS=${WEB_SEARCH_CONCURRENT_REQUESTS}
+      - WEB_SEARCH_RESULT_COUNT=${WEB_SEARCH_RESULT_COUNT}
+      - ENABLE_PERSISTENT_CONFIG=${ENABLE_PERSISTENT_CONFIG}
+      - RAG_RERANKING_MODEL=${RAG_RERANKING_MODEL}
+      - ENABLE_RAG_RERANKING=${ENABLE_RAG_RERANKING}
+      - RAG_TOP_K_RERANKER=${RAG_TOP_K_RERANKER}
+      - ENABLE_RAG_WEB_SEARCH_BY_DEFAULT=${ENABLE_RAG_WEB_SEARCH_BY_DEFAULT}
+      - ENABLE_RAG_SOURCES=${ENABLE_RAG_SOURCES}
+      - RAG_CITATION_ENGINE=${RAG_CITATION_ENGINE}
+      - ENABLE_WEB_SEARCH=${ENABLE_WEB_SEARCH}
+      - ENABLE_WEB_SEARCH_BY_DEFAULT=${ENABLE_WEB_SEARCH_BY_DEFAULT}
+      - WEB_SEARCH_ENGINE=${WEB_SEARCH_ENGINE}
+      - WEB_SEARCH_QUERY_URL=${WEB_SEARCH_QUERY_URL}
+      - OPENAI_API_BASE_URLS=${PIPELINES_URL}
+      - OPENAI_API_KEYS=${PIPELINES_API_KEY}
+    restart: unless-stopped
+
+  searxng:
+    image: docker.io/searxng/searxng:latest
+    container_name: searxng
+    networks:
+      - rag-network
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./searxng_data:/etc/searxng:Z,U
+    environment:
+      - SEARXNG_LIMITER=false
+      - BASE_URL=${SEARXNG_BASE_URL}
+    restart: unless-stopped
+
+  pipelines:
+    image: ghcr.io/open-webui/pipelines:main
+    container_name: pipelines
+    ports:
+      - "9099:9099"
+    networks:
+      - rag-network
+    volumes:
+      - ./pipelines/workflows:/app/pipelines:Z,U
+    environment:
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
+      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL}
+      - PIPELINES_API_KEY=${PIPELINES_API_KEY}
     restart: unless-stopped
 
 networks:
