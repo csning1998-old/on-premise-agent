@@ -1,14 +1,26 @@
 
-ollama_data
-open-webui_data
-searxng_data
-
+# Agent Stuffs
 .agents
 artifacts
 
-terraform.tfvars
-.terraform
-*.tfstate*
-
+# Environment variables
 .env
-agent-force.md
+.env.*
+!.env.example
+
+# Pipelines Runtime Artifacts
+pipelines/workflows/**/valves.json
+pipelines/workflows/__pycache__/
+**/__pycache__/
+
+# Data Directories
+ollama_data/
+open-webui_data/
+searxng_data/
+terraform/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+
+# Logs
+*.log
