@@ -1,8 +1,9 @@
-"""Gemma 4 Multistage Reasoning Pipeline for Open WebUI.
-
-This module implements a multistage orchestration logic to handle intent detection,
-web search, and deep reasoning using Gemma 4 models (e4b and 26b) within
-a resource-constrained environment.
+"""
+title: Gemma 4 Multistage Deep Think
+id: gemma_4_multistage
+description: Multistage orchestration for intent detection, web search, and deep reasoning.
+author: csning1998
+version: 1.0
 """
 
 import json
@@ -16,9 +17,16 @@ from pydantic import BaseModel, Field
 class Pipeline:
     """Open WebUI Pipeline for multistage LLM reasoning."""
 
+    id: str = "gemma_4_multistage"
+    name: str = "Gemma 4 Multistage Deep Think"
+
     class Valves(BaseModel):
         """Configuration options for the pipeline."""
 
+        pipelines: List[str] = Field(
+            default=["*"],
+            description="Target pipeline IDs for this valve configuration.",
+        )
         ollama_url: str = Field(
             default=os.getenv("OLLAMA_BASE_URL", "http://ollama:11434"),
             description="Base URL for the Ollama API.",
@@ -37,9 +45,7 @@ class Pipeline:
         )
 
     def __init__(self):
-        """Initializes the pipeline with default id, name and valves."""
-        self.id = "gemma_4_multistage"
-        self.name = "Gemma 4 Multistage Deep Think"
+        """Initializes the pipeline with default valves."""
         self.valves = self.Valves()
 
     async def on_startup(self):
