@@ -3,7 +3,7 @@ title: Gemma 4 Multistage Deep Think
 id: gemma_4_multistage
 description: Multistage orchestration for intent detection, web search, and deep reasoning.
 author: csning1998
-version: 1.0
+version: 1.1
 """
 
 import json

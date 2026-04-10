@@ -19,6 +19,7 @@ services:
     depends_on:
       - ollama
       - searxng
+      - pipelines
     ports:
       - "3000:8080"
     networks:
@@ -47,8 +48,8 @@ services:
       - ENABLE_WEB_SEARCH_BY_DEFAULT=${ENABLE_WEB_SEARCH_BY_DEFAULT}
       - WEB_SEARCH_ENGINE=${WEB_SEARCH_ENGINE}
       - WEB_SEARCH_QUERY_URL=${WEB_SEARCH_QUERY_URL}
-      - OPENAI_API_BASE_URLS=${PIPELINES_URL}
-      - OPENAI_API_KEYS=${PIPELINES_API_KEY}
+      - OPENAI_API_BASE_URL=${PIPELINES_URL}
+      - OPENAI_API_KEY=${PIPELINES_API_KEY}
     restart: unless-stopped
 
   searxng:
