@@ -9,6 +9,7 @@ version: 2.0
 import asyncio
 import json
 import os
+import re
 from typing import AsyncGenerator, Generator, Iterator, List, Union
 
 import httpx
@@ -60,7 +61,6 @@ class Pipeline:
 
     def _clean_keywords(self, text: str) -> str:
         """Removes markdown code blocks, JSON artifacts, and noise from keywords."""
-        import re
         text = re.sub(r"<think>[\s\S]*?</think>", "", text, flags=re.IGNORECASE)
         text = re.sub(r"<thought>[\s\S]*?</thought>", "", text, flags=re.IGNORECASE)
         text = re.sub(r"<reasoning>[\s\S]*?</reasoning>", "", text, flags=re.IGNORECASE)
