@@ -1,9 +1,9 @@
 """
-title: Gemma 4 Multistage Deep Think
-id: gemma_4_multistage
-description: Multistage orchestration for intent detection, web search, and deep reasoning.
+title: Gemma 4 Multi-Agent Deep Think
+id: gemma_4_multi_agent
+description: 4 e4b agents in parallel + 26b-a4b finalizer with chain-of-thinking.
 author: csning1998
-version: 1.1
+version: 2.0
 """
 
 import json
@@ -15,10 +15,10 @@ from pydantic import BaseModel, Field
 
 
 class Pipeline:
-    """Open WebUI Pipeline for multistage LLM reasoning."""
+    """Open WebUI Pipeline for 4-agent multi-stage reasoning."""
 
-    id: str = "gemma_4_multistage"
-    name: str = "Gemma 4 Multistage Deep Think"
+    id: str = "gemma_4_multi_agent"
+    name: str = "Gemma 4 Multi-Agent Deep Think"
 
     class Valves(BaseModel):
         """Configuration options for the pipeline."""
@@ -37,11 +37,11 @@ class Pipeline:
         )
         e4b_model: str = Field(
             default="gemma4:e4b",
-            description="Model identifier for intent and keywords generation.",
+            description="Model identifier for all e4b agents.",
         )
         a4b_model: str = Field(
             default="gemma4:26b",
-            description="Model identifier for deep reasoning (thinking mode).",
+            description="Model identifier for finalizer.",
         )
 
     def __init__(self):
@@ -56,19 +56,20 @@ class Pipeline:
         """Lifecycle event triggered when the pipeline shuts down."""
         print(f"Pipeline {self.name} shutting down.")
 
-    def _generate_search_query(self, user_message: str) -> str:
-        """Uses E4B model to determine if search is needed and generate keywords.
+    def _clean_keywords(self, text: str) -> str:
+        """Removes markdown code blocks, JSON artifacts, and noise from keywords."""
+        import re
+        text = re.sub(r"<think>[\s\S]*?</think>", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"<thought>[\s\S]*?</thought>", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"<reasoning>[\s\S]*?</reasoning>", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"```(?:json)?\s*[\s\S]*?```", "", text)
+        text = re.sub(r"\{.*\}", "", text)
+        text = re.sub(r"[\"\'\[\]\(\)]", "", text)
+        words = re.findall(r"\w+", text)
+        return " ".join(words[:5]).strip()
 
-        Args:
-            user_message: The raw message from the user.
-
-        Returns:
-            A string of keywords or 'NO_SEARCH'.
-        """
-        prompt = (
-            "Determine if this query needs a web search. If yes, output ONLY 3-5 "
-            f"search keywords. If no, output 'NO_SEARCH'. Query: {user_message}"
-        )
+    def _call_e4b(self, prompt: str) -> str:
+        """Single e4b call."""
         try:
             response = requests.post(
                 f"{self.valves.ollama_url}/api/generate",
@@ -76,71 +77,86 @@ class Pipeline:
                     "model": self.valves.e4b_model,
                     "prompt": prompt,
                     "stream": False,
-                    "keep_alive": 0,
+                    "keep_alive": "5m",
                 },
-                timeout=30,
+                timeout=300,
             )
             response.raise_for_status()
             return response.json().get("response", "").strip()
         except requests.exceptions.RequestException as e:
             print(f"E4B Call failed: {e}")
-            return "NO_SEARCH"
+            return "ERROR: Agent timeout."
 
-    def _fetch_web_context(self, keywords: str) -> str:
-        """Fetches search results from SearXNG based on keywords.
+    def _researcher_agent(self, user_message: str) -> str:
+        """Agent 2: Researcher - generate keywords and fetch + align facts."""
+        keywords_prompt = (
+            "You must output ONLY 3-5 search keywords for web search. Do NOT use markdown. "
+            "If you need to think, put it inside <think>...</think> tags FIRST, then output just the keywords. "
+            "Query: " + user_message
+        )
+        raw_keywords = self._call_e4b(keywords_prompt)
+        keywords = self._clean_keywords(raw_keywords)
 
-        Args:
-            keywords: Keywords for searching.
-
-        Returns:
-            A summarized context string from search results.
-        """
-        if "NO_SEARCH" in keywords:
-            return ""
-
+        if not keywords or "NO_SEARCH" in keywords:
+            return "No search results."
         try:
             search_url = f"{self.valves.searxng_url}/search?q={keywords}&format=json"
-            response = requests.get(search_url, timeout=15)
+            response = requests.get(search_url, timeout=60)
             response.raise_for_status()
-            results = response.json().get("results", [])[:5]
-            return "\n".join(
-                [f"Source: {r['url']}\nContent: {r['content']}" for r in results]
-            )
+            results = response.json().get("results", [])[:10]
+            facts = "\n".join([f"Source: {r.get('url', '')}\nContent: {r.get('content', '')}" for r in results])
+            align_prompt = f"Align the following facts:\n{facts}"
+            return self._call_e4b(align_prompt)
         except requests.exceptions.RequestException as e:
-            print(f"SearXNG Call failed: {e}")
-            return ""
+            return f"Search failed: {e}"
+
+    def _logic_agent(self, user_message: str, facts: str) -> str:
+        """Agent 3: Logic Verifier - check consistency."""
+        prompt = f"Verify logical consistency for query: {user_message}\nFACTS: {facts}"
+        return self._call_e4b(prompt)
+
+    def _contrarian_agent(self, user_message: str, facts: str) -> str:
+        """Agent 4: Contrarian - challenge assumptions."""
+        prompt = f"List counter-arguments for query: {user_message}\nFACTS: {facts}"
+        return self._call_e4b(prompt)
+
+    def _coordinator_agent(self, user_message: str) -> str:
+        """Agent 1: Coordinator - initial task breakdown."""
+        prompt = f"Break down the query: {user_message}"
+        return self._call_e4b(prompt)
 
     def pipe(
         self, user_message: str, model_id: str, messages: List[dict], body: dict
     ) -> Union[str, Generator, Iterator]:
-        """Main pipeline execution entry point.
+        """Main pipeline: 4 e4b agents parallel + 26b finalizer with UI thinking blocks."""
 
-        Args:
-            user_message: The current user message.
-            model_id: The requested model ID.
-            messages: Conversation history.
-            body: Full request body from Open WebUI.
+        coordinator_output = self._coordinator_agent(user_message)
+        researcher_facts = self._researcher_agent(user_message)
+        logic_output = self._logic_agent(user_message, researcher_facts)
+        contrarian_output = self._contrarian_agent(user_message, researcher_facts)
 
-        Returns:
-            A generator for the streamed response.
-        """
-        print(f"Processing query: {user_message}")
+        aligned_context = (
+            f"COORDINATOR: {coordinator_output}\n"
+            f"RESEARCH FACTS: {researcher_facts}\n"
+            f"LOGIC CHECK: {logic_output}\n"
+            f"CONTRARIAN: {contrarian_output}"
+        )
 
-        # Stage 1: Intent & Search Key Generation
-        keywords = self._generate_search_query(user_message)
-
-        # Stage 2: Web Search
-        context = self._fetch_web_context(keywords)
-
-        # Stage 3: Deep Inference with Thinking Trigger
         final_prompt = (
-            "<|think|> You are a meticulous deep-thinking analyst. Use the "
-            "following facts to answer the user query step-by-step. "
-            f"FACTS: {context} \n USER QUERY: {user_message}"
+            "You are the finalizer. "
+            "CRITICAL: If you use <think> tags for reasoning, you MUST output your final answer OUTSIDE and AFTER the </think> tag. "
+            "Do NOT place your final answer inside the thinking process. "
+            f"ALIGNED CONTEXT: {aligned_context} \n USER QUERY: {user_message}"
         )
 
         def stream_response():
-            """Streams the response from the 26B model."""
+            yield "<thought>\n"
+            yield f"#### 📡 Coordinator\n{coordinator_output}\n\n"
+            yield f"#### 🔍 Research\n{researcher_facts[:300]}...\n\n"
+            yield f"#### ⚖️ Logic\n{logic_output}\n\n"
+            yield f"#### 🛡️ Contrarian\n{contrarian_output}\n"
+            yield "</thought>\n\n"
+
             try:
                 with requests.post(
                     f"{self.valves.ollama_url}/api/generate",
@@ -163,6 +179,6 @@ class Pipeline:
                             except (json.JSONDecodeError, ValueError):
                                 continue
             except requests.exceptions.RequestException as e:
-                yield f"Error in Deep Inference Stage: {e}"
+                yield f"Error: {e}"
 
         return stream_response()

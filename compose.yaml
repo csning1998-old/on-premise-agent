@@ -50,6 +50,11 @@ services:
       - WEB_SEARCH_QUERY_URL=${WEB_SEARCH_QUERY_URL}
       - OPENAI_API_BASE_URL=${PIPELINES_URL}
       - OPENAI_API_KEY=${PIPELINES_API_KEY}
+      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL}
+      - WEBUI_ADMIN_EMAIL=${WEBUI_ADMIN_EMAIL}
+      - WEBUI_ADMIN_PASSWORD=${WEBUI_ADMIN_PASSWORD}
+      - WEBUI_ADMIN_NAME=${WEBUI_ADMIN_NAME}
+      - ENABLE_SIGNUP=${ENABLE_SIGNUP}
     restart: unless-stopped
 
   searxng:
@@ -63,6 +68,7 @@ services:
       - ./searxng_data:/etc/searxng:Z,U
     environment:
       - SEARXNG_LIMITER=false
+      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL}
       - BASE_URL=${SEARXNG_BASE_URL}
     restart: unless-stopped
 

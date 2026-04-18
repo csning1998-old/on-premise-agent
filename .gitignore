@@ -16,7 +16,6 @@ pipelines/workflows/__pycache__/
 # Data Directories
 ollama_data/
 open-webui_data/
-searxng_data/
 terraform/.terraform/
 *.tfstate
 *.tfstate.backup
