@@ -39,6 +39,26 @@ To allow Podman to correctly identify and invoke NVIDIA GPUs, a CDI (Container D
     podman run --rm --device nvidia.com/gpu=all fedora nvidia-smi
     ```
 
+- **Fix: CDI Device Injection Failure (`failed to stat /dev/nvidia-modeset`):**
+
+    If Podman fails with an error stating it cannot find `/dev/nvidia-modeset`, which means the CDI specification is likely stale. Regenerate it locally and instruct Podman to prioritize it:
+    1. Regenerate CDI spec for the current user
+
+        ```zsh
+        mkdir -p ~/.config/cdi
+        nvidia-ctk cdi generate --output=${HOME}/.config/cdi/nvidia.yaml
+        ```
+
+    2. Force Podman to ignore broken system-wide CDI specs
+
+        ```zsh
+        mkdir -p ~/.config/containers
+        cat <<EOF > ~/.config/containers/containers.conf
+        [engine]
+        cdi_spec_dirs = ["${HOME}/.config/cdi"]
+        EOF
+        ```
+
 ### Step B. SELinux Security Policy Configuration
 
 Fedora's default SELinux policy restricts container access to hardware devices and specific system calls; these must be manually permitted.

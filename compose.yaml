@@ -19,6 +19,7 @@ services:
     depends_on:
       - ollama
       - searxng
+      - pipelines
     ports:
       - "3000:8080"
     networks:
@@ -47,8 +48,13 @@ services:
       - ENABLE_WEB_SEARCH_BY_DEFAULT=${ENABLE_WEB_SEARCH_BY_DEFAULT}
       - WEB_SEARCH_ENGINE=${WEB_SEARCH_ENGINE}
       - WEB_SEARCH_QUERY_URL=${WEB_SEARCH_QUERY_URL}
-      - OPENAI_API_BASE_URLS=${PIPELINES_URL}
-      - OPENAI_API_KEYS=${PIPELINES_API_KEY}
+      - OPENAI_API_BASE_URLS=${OPENAI_API_BASE_URLS}
+      - OPENAI_API_KEYS=${OPENAI_API_KEYS}
+      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL}
+      - WEBUI_ADMIN_EMAIL=${WEBUI_ADMIN_EMAIL}
+      - WEBUI_ADMIN_PASSWORD=${WEBUI_ADMIN_PASSWORD}
+      - WEBUI_ADMIN_NAME=${WEBUI_ADMIN_NAME}
+      - ENABLE_SIGNUP=${ENABLE_SIGNUP}
     restart: unless-stopped
 
   searxng:
@@ -62,6 +68,7 @@ services:
       - ./searxng_data:/etc/searxng:Z,U
     environment:
       - SEARXNG_LIMITER=false
+      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL}
       - BASE_URL=${SEARXNG_BASE_URL}
     restart: unless-stopped
 
@@ -77,7 +84,7 @@ services:
     environment:
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
       - SEARXNG_BASE_URL=${SEARXNG_BASE_URL}
-      - PIPELINES_API_KEY=${PIPELINES_API_KEY}
+      - PIPELINES_API_KEY=${OPENAI_API_KEYS}
     restart: unless-stopped
 
 networks:
