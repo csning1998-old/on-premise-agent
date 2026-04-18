@@ -94,6 +94,7 @@ class Pipeline:
         """Agent 2: Researcher - generate keywords and fetch + align facts."""
         keywords_prompt = (
             "You must output ONLY 3-5 search keywords for web search. Do NOT use markdown. "
+            "DO NOT use any emojis. "
             "If you need to think, put it inside <think>...</think> tags FIRST, then output just the keywords. "
             "Query: " + user_message
         )
@@ -116,17 +117,17 @@ class Pipeline:
 
     async def _logic_agent(self, user_message: str, facts: str) -> str:
         """Agent 3: Logic Verifier - check consistency."""
-        prompt = f"Verify logical consistency for query: {user_message}\nFACTS: {facts}"
+        prompt = f"Verify logical consistency for query: {user_message}\nFACTS: {facts}\nDO NOT use any emojis."
         return await self._async_call_e4b(prompt)
 
     async def _contrarian_agent(self, user_message: str, facts: str) -> str:
         """Agent 4: Contrarian - challenge assumptions."""
-        prompt = f"List counter-arguments for query: {user_message}\nFACTS: {facts}"
+        prompt = f"List counter-arguments for query: {user_message}\nFACTS: {facts}\nDO NOT use any emojis."
         return await self._async_call_e4b(prompt)
 
     async def _coordinator_agent(self, user_message: str) -> str:
         """Agent 1: Coordinator - initial task breakdown."""
-        prompt = f"Break down the query: {user_message}"
+        prompt = f"Break down the query: {user_message}\nDO NOT use any emojis."
         return await self._async_call_e4b(prompt)
 
     def pipe(
@@ -134,30 +135,49 @@ class Pipeline:
     ) -> Union[str, Generator, Iterator]:
         """Main pipeline: 4 e4b agents parallel + 26b finalizer with UI thinking blocks."""
 
+        __event_emitter__ = body.get("__event_emitter__")
+
         def stream_response():
             yield "<thought>\n"
             yield "#### Agents Initializing...\n"
 
             # Stage 1: Run Coordinator and Researcher in parallel
             async def run_stage_1():
+                if __event_emitter__:
+                    await __event_emitter__({"type": "status", "data": {"description": "Stage 1: Coordinator and Research starting", "done": False}})
                 coordinator_task = asyncio.create_task(self._coordinator_agent(user_message))
                 researcher_task = asyncio.create_task(self._researcher_agent(user_message))
                 return await asyncio.gather(coordinator_task, researcher_task)
 
             coordinator_output, researcher_facts = asyncio.run(run_stage_1())
+            yield "</thought>\n\n"
 
+            yield "<thought>\n"
             yield f"#### Coordinator\n{coordinator_output}\n\n"
+            yield "</thought>\n\n"
+
+            yield "<thought>\n"
             yield f"#### Research\n{researcher_facts[:300]}...\n\n"
+            yield "</thought>\n\n"
 
             # Stage 2: Run Logic and Contrarian in parallel
             async def run_stage_2(facts):
+                if __event_emitter__:
+                    await __event_emitter__({"type": "status", "data": {"description": "Stage 2: Logic and Contrarian starting", "done": False}})
                 logic_task = asyncio.create_task(self._logic_agent(user_message, facts))
                 contrarian_task = asyncio.create_task(self._contrarian_agent(user_message, facts))
-                return await asyncio.gather(logic_task, contrarian_task)
+                res = await asyncio.gather(logic_task, contrarian_task)
+                if __event_emitter__:
+                    await __event_emitter__({"type": "status", "data": {"description": "Agents execution completed", "done": True}})
+                return res
 
             logic_output, contrarian_output = asyncio.run(run_stage_2(researcher_facts))
 
+            yield "<thought>\n"
             yield f"#### Logic\n{logic_output}\n\n"
+            yield "</thought>\n\n"
+
+            yield "<thought>\n"
             yield f"#### Contrarian\n{contrarian_output}\n"
             yield "</thought>\n\n"
 
@@ -172,6 +192,7 @@ class Pipeline:
                 "You are the finalizer. "
                 "CRITICAL: If you use <think> tags for reasoning, you MUST output your final answer OUTSIDE and AFTER the </think> tag. "
                 "Do NOT place your final answer inside the thinking process. "
+                "DO NOT use any emojis. "
                 f"ALIGNED CONTEXT: {aligned_context} \n USER QUERY: {user_message}"
             )
 
